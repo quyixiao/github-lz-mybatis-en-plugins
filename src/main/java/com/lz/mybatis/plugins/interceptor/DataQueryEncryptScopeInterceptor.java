@@ -31,14 +31,14 @@ import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.reflection.SystemMetaObject;
 import org.apache.ibatis.session.Configuration;
 
-import java.sql.Statement;
+import java.sql.Connection;
 import java.util.Properties;
 
 @Slf4j
-@Intercepts({@Signature(type = StatementHandler.class, method = "parameterize", args = {Statement.class})})
-public class DataEncryptScopeInterceptor extends SqlParserHandler implements Interceptor {
+@Intercepts({@Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})})
+public class DataQueryEncryptScopeInterceptor extends SqlParserHandler implements Interceptor {
 
-    public DataEncryptScopeInterceptor() {
+    public DataQueryEncryptScopeInterceptor() {
 
     }
 
@@ -50,8 +50,6 @@ public class DataEncryptScopeInterceptor extends SqlParserHandler implements Int
         BoundSql boundSql = (BoundSql) metaObject.getValue("delegate.boundSql");
         MappedStatement mappedStatement = (MappedStatement) metaObject.getValue("delegate.mappedStatement");
         if (SqlCommandType.SELECT.equals(mappedStatement.getSqlCommandType())) {           //非select语句
-            return invocation.proceed();
-        } else {
             this.sqlParser(metaObject);
             ParameterHandler parameterHandler = (ParameterHandler) metaObject.getValue("delegate.parameterHandler");
             String mapperdId = PSqlParseUtil.getMapperId(mappedStatement);
@@ -59,6 +57,8 @@ public class DataEncryptScopeInterceptor extends SqlParserHandler implements Int
             encrySqlParamData(configuration, parameterHandler, mapperdId, boundSql);
             Object result = invocation.proceed();
             return result;
+        } else {
+            return invocation.proceed();
         }
     }
 

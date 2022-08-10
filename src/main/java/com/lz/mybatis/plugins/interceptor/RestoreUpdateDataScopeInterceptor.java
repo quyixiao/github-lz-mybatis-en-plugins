@@ -35,7 +35,7 @@ import java.util.Properties;
 
 @Slf4j
 @Intercepts({@Signature(type = StatementHandler.class, method = "update", args = {Statement.class})})
-public class RestoreDataScopeInterceptor extends SqlParserHandler implements Interceptor {
+public class RestoreUpdateDataScopeInterceptor extends SqlParserHandler implements Interceptor {
 
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
