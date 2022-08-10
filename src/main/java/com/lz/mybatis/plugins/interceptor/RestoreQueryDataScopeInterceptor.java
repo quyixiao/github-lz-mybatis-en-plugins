@@ -33,11 +33,6 @@ import org.apache.ibatis.session.ResultHandler;
 import java.sql.Statement;
 import java.util.Properties;
 
-/**
- * @author songfayuan
- * @date 2018/1/19
- * 数据权限插件，guns
- */
 @Slf4j
 @Intercepts({@Signature(type = StatementHandler.class, method = "query", args = {Statement.class, ResultHandler.class})})
 public class RestoreQueryDataScopeInterceptor extends SqlParserHandler implements Interceptor {

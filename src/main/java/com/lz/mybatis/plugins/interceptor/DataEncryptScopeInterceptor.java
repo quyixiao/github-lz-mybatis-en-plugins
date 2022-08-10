@@ -34,11 +34,6 @@ import org.apache.ibatis.session.Configuration;
 import java.sql.Statement;
 import java.util.Properties;
 
-/**
- * @author songfayuan
- * @date 2018/1/19
- * 数据权限插件，guns
- */
 @Slf4j
 @Intercepts({@Signature(type = StatementHandler.class, method = "parameterize", args = {Statement.class})})
 public class DataEncryptScopeInterceptor extends SqlParserHandler implements Interceptor {
