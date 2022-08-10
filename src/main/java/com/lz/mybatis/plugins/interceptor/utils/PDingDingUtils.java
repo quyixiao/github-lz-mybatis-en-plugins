@@ -17,7 +17,7 @@ import java.util.Arrays;
 @Slf4j
 public class PDingDingUtils {
 
-    protected static String dingTalkUrlPre = "https://oapi.dingtalk.com/robot/send?access_token=f69b43f939ea75555a673b2b51b4977839efc580342cccc80ad788d1e687b6e4";
+    protected static String dingTalkUrlPre = "https://oapi.dingtalk.com/robot/send?access_token=${access_token}";
 
     public static void sendText(String text) {
         try {
