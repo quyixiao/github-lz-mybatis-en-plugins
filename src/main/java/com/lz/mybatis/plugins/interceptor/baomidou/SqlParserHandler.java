@@ -140,52 +140,52 @@ public abstract class SqlParserHandler {
                 } else {
                     MetaObject metaObject = configuration.newMetaObject(parameterObject);
                     if (parameterObject instanceof DefaultSqlSession.StrictMap) {       //表示一个集合
-                        List<Object> list = (List<Object>) metaObject.getValue("list");
-                        if (list != null && list.size() > 0) {
-                            List<Object> collection = (List<Object>) metaObject.getValue("collection");
-                            for (int i = 0; i < list.size(); i++) {
-                                Object object1 = list.get(i);
-                                Object object2 = collection.get(i);
-                                MetaObject meta1 = configuration.newMetaObject(object1);
-                                MetaObject meta2 = configuration.newMetaObject(object2);
-                                for (Map.Entry<Integer, String> paramMap : paramMaps.entrySet()) {
-                                    String propertyName = PSqlParseUtil.field2JavaCode(paramMap.getValue());
-                                    Object temp = meta1.getValue(propertyName);
-                                    Object value = encode(temp);
-                                    meta1.setValue(propertyName, value);
-                                    meta2.setValue(propertyName, value);
-                                    sb.append("(").append(propertyName).append(" : ").append(temp).append(" -> ").append(value).append("),");
-                                }
-                            }
-                        } else {
-                            Object[] array = (Object[]) metaObject.getValue("array");
-                            if (array != null && array.length > 0) {
-                                for (int i = 0; i < array.length; i++) {
-                                    Object object1 = list.get(i);
-                                    MetaObject meta1 = configuration.newMetaObject(object1);
+                        Set<String> keySet = ((DefaultSqlSession.StrictMap<?>) parameterObject).keySet();
+                        if(keySet.contains("list")){
+                            List<Object> list = (List<Object>) metaObject.getValue("list");
+                            if (list != null && list.size() > 0) {
+                                Object object = list.get(0);
+                                if(object instanceof  String){
+                                    setValueOrSetAdditionalParameter(paramMaps,parameterMappings,boundSql,metaObject ,sb );
+                                }else{
+                                    List<Object> collection = (List<Object>) metaObject.getValue("collection");
+                                    int i = 0 ;
                                     for (Map.Entry<Integer, String> paramMap : paramMaps.entrySet()) {
+                                        MetaObject meta1 = configuration.newMetaObject( list.get(i));
+                                        MetaObject meta2 = configuration.newMetaObject( collection.get(i));
                                         String propertyName = PSqlParseUtil.field2JavaCode(paramMap.getValue());
                                         Object temp = meta1.getValue(propertyName);
                                         Object value = encode(temp);
                                         meta1.setValue(propertyName, value);
+                                        meta2.setValue(propertyName, value);
+                                        i ++;
+                                        sb.append("(").append(propertyName).append(" : ").append(temp).append(" -> ").append(value).append("),");
+                                    }
+
+                                }
+                            }
+                        }else{
+                            Object[] array = (Object[]) metaObject.getValue("array");
+                            if (array != null && array.length > 0) {
+                                Object object = array[0];
+                                if(object instanceof  String){
+                                    setValueOrSetAdditionalParameter(paramMaps,parameterMappings,boundSql,metaObject ,sb );
+                                }else{
+                                    int i = 0 ;
+                                    for (Map.Entry<Integer, String> paramMap : paramMaps.entrySet()) {
+                                        MetaObject meta1 = configuration.newMetaObject(array[i]);
+                                        String propertyName = PSqlParseUtil.field2JavaCode(paramMap.getValue());
+                                        Object temp = meta1.getValue(propertyName);
+                                        Object value = encode(temp);
+                                        meta1.setValue(propertyName, value);
+                                        i ++;
                                         sb.append("(").append(propertyName).append(" : ").append(temp).append(" -> ").append(value).append("),");
                                     }
                                 }
                             }
                         }
                     } else {
-                        for (Map.Entry<Integer, String> paramMap : paramMaps.entrySet()) {
-                            int index = paramMap.getKey();
-                            ParameterMapping parameterMapping = parameterMappings.get(index);
-                            String propertyName = parameterMapping.getProperty();
-                            PTuple2<Boolean, Object> indetValue = getIndexObject(boundSql, metaObject, propertyName, index).getData();
-                            Object encode = encode(indetValue.getSecond());
-                            metaObject.setValue(propertyName, encode);
-                            sb.append("(").append(propertyName).append(" : ").append(indetValue.getSecond()).append(" -> ").append(encode).append("),");
-                            if (indetValue.getFirst()) {
-                                boundSql.setAdditionalParameter(propertyName, encode);
-                            }
-                        }
+                        setValueOrSetAdditionalParameter(paramMaps,parameterMappings,boundSql,metaObject ,sb );
                     }
                 }
             }
@@ -197,6 +197,22 @@ public abstract class SqlParserHandler {
                 log.error("sql insert/update/select/delete 加密异常 exception sql = " + sql + ", key = " + key + " ,mappid = " + mapperdId + " ,data =   " + JSON.toJSONString(data) + ", pluginTuple = " + JSON.toJSONString(pluginTuple), e);
             } catch (Exception ex) {
                 log.error("异常xxx", e);
+            }
+        }
+    }
+
+    public void setValueOrSetAdditionalParameter(Map<Integer, String> paramMaps, List<ParameterMapping> parameterMappings,
+                                                 BoundSql boundSql, MetaObject metaObject, StringBuffer sb) {
+        for (Map.Entry<Integer, String> paramMap : paramMaps.entrySet()) {
+            int index = paramMap.getKey();
+            ParameterMapping parameterMapping = parameterMappings.get(index);
+            String propertyName = parameterMapping.getProperty();
+            PTuple2<Boolean, Object> indetValue = getIndexObject(boundSql, metaObject, propertyName, index).getData();
+            Object encode = encode(indetValue.getSecond());
+            metaObject.setValue(propertyName, encode);
+            sb.append("(").append(propertyName).append(" : ").append(indetValue.getSecond()).append(" -> ").append(encode).append("),");
+            if (indetValue.getFirst()) {
+                boundSql.setAdditionalParameter(propertyName, encode);
             }
         }
     }
@@ -247,6 +263,7 @@ public abstract class SqlParserHandler {
         if (pluginTuple != null) {
             return pluginTuple;
         }
+
         log.info(" 没有从缓存中获取数据,直接生成数据,key= " + key + ", sql = " + sql);
         if ("?".equals(sql.trim())) {
             pluginTuple = new PPTuple(false, null);
@@ -384,36 +401,44 @@ public abstract class SqlParserHandler {
             if (parameterMappings.size() > 0 && parameterObject != null) {
                 MetaObject metaObject = configuration.newMetaObject(parameterObject);
                 if (parameterObject instanceof DefaultSqlSession.StrictMap) {       //表示一个集合
-                    List<Object> list = (List<Object>) metaObject.getValue("list");
-                    if (list != null && list.size() > 0) {
-                        List<Object> collection = (List<Object>) metaObject.getValue("collection");
-                        for (int i = 0; i < list.size(); i++) {
-                            Object object1 = list.get(i);
-                            Object object2 = collection.get(i);
-                            MetaObject meta1 = configuration.newMetaObject(object1);
-                            MetaObject meta2 = configuration.newMetaObject(object2);
-                            for (Map.Entry<Integer, String> paramMap : paramMaps.entrySet()) {
-                                String propertyName = PSqlParseUtil.field2JavaCode(paramMap.getValue());
-                                Object temp = meta1.getValue(propertyName);
-                                Object value = decode(temp);
-                                meta1.setValue(propertyName, value);
-                                meta2.setValue(propertyName, value);
-                            }
-                        }
-                    } else {
-                        Object[] array = (Object[]) metaObject.getValue("array");
-                        if (array != null && array.length > 0) {
-                            for (int i = 0; i < array.length; i++) {
-                                Object object1 = list.get(i);
-                                MetaObject meta1 = configuration.newMetaObject(object1);
+                    Set<String> keySet = ((DefaultSqlSession.StrictMap<?>) parameterObject).keySet();
+                    if(keySet.contains("list")){
+                        List<Object> list = (List<Object>) metaObject.getValue("list");
+                        if (list != null && list.size() > 0) {
+                            Object object = list.get(0);
+                            if (!(object instanceof String)) {
+                                List<Object> collection = (List<Object>) metaObject.getValue("collection");
+                                int i = 0 ;
                                 for (Map.Entry<Integer, String> paramMap : paramMaps.entrySet()) {
+                                    MetaObject meta1 = configuration.newMetaObject(list.get(i));
+                                    MetaObject meta2 = configuration.newMetaObject(collection.get(i));
                                     String propertyName = PSqlParseUtil.field2JavaCode(paramMap.getValue());
                                     Object temp = meta1.getValue(propertyName);
                                     Object value = decode(temp);
                                     meta1.setValue(propertyName, value);
+                                    meta2.setValue(propertyName, value);
+                                    i ++;
                                 }
                             }
                         }
+                    } else {
+
+                        Object[] array = (Object[]) metaObject.getValue("array");
+                        if (array != null && array.length > 0) {
+                            Object object = array[0];
+                            if (!(object instanceof String)) {
+                                int i = 0 ;
+                                for (Map.Entry<Integer, String> paramMap : paramMaps.entrySet()) {
+                                    MetaObject meta1 = configuration.newMetaObject(array[i]);
+                                    String propertyName = PSqlParseUtil.field2JavaCode(paramMap.getValue());
+                                    Object temp = meta1.getValue(propertyName);
+                                    Object value = decode(temp);
+                                    meta1.setValue(propertyName, value);
+                                    i ++;
+                                }
+                            }
+                        }
+
                     }
                 } else {
                     for (Map.Entry<Integer, String> paramMap : paramMaps.entrySet()) {
