@@ -116,14 +116,27 @@ public abstract class SqlParserHandler {
     public void encrySqlParamData(Configuration configuration, ParameterHandler parameterHandler, String mapperdId, BoundSql boundSql) {
         PTuple2<Boolean, Map<Integer, String>> data = null;
         String sql = boundSql.getSql();
+        // 不能每条sql都进行解析，对于相同的SQL
+        // 只做一次解析，将解析的结果以 mapperdId + md5(sql) 组成key
+        // 存储到缓存中
         String key = mapperdId + PMD5Util.encode(sql);
         try {
             PPTuple pluginTuple = enterMap.get(key);
             if (pluginTuple == null) {
+                // data 为元组
+                // 第一个对象标识SQL中有没有需要被加密解密的字段
+                // 第二个对象为一个map , key 为 加密字段出现的位置，value 为字段名称
+                // 如select * from user where status = ? and user_name_en = ?
+                // 而status 不需要被加密解密 ,user_name_en 需要被加密解密
+                // 则map 中存储的为 key  = 1 ， value = user_name_en
                 data = getChangeColumn(configuration, mapperdId, sql, key).getData();
             } else {
                 data = pluginTuple.getData();
             }
+            // 这里使用了元组，虽然Java 使用元组不太好用
+            // 那还是用一下吧， first存储的是这条SQL有没有字段需要被加密解密
+            // 如果first 为true，表示SQL中有字段需要被加密，如果为false
+            // SQL 中没有任何字段需要被加密解密
             if (!data.getFirst()) {
                 return;
             }
@@ -131,9 +144,14 @@ public abstract class SqlParserHandler {
             Object parameterObject = boundSql.getParameterObject();
             StringBuffer sb = new StringBuffer();
             List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
+
             if (parameterMappings.size() > 0 && parameterObject != null) {
+                // 如果parameterObject 是字符串，并且
+                // 并且 parameterMappings 只有一个参数
                 if (parameterMappings != null && parameterMappings.size() == 1
                         && parameterObject != null && parameterObject instanceof String) {
+                    // 通过反射修改 parameterObject 属性值
+                    // 为加密后的值
                     Object encode = encode(parameterObject + "");
                     setFieldValue(parameterHandler, "parameterObject", encode);
                     sb.append("(").append(parameterObject).append(" -> ").append(encode).append("),");
@@ -141,6 +159,8 @@ public abstract class SqlParserHandler {
                     MetaObject metaObject = configuration.newMetaObject(parameterObject);
                     if (parameterObject instanceof DefaultSqlSession.StrictMap) {       //表示一个集合
                         Set<String> keySet = ((DefaultSqlSession.StrictMap<?>) parameterObject).keySet();
+                        // 对于查询条件是一个list 或 collection时
+                        // 需要将list或collection对象的值给替换掉，这个和mybatis源码相关
                         if(keySet.contains("list")){
                             List<Object> list = (List<Object>) metaObject.getValue("list");
                             if (list != null && list.size() > 0) {
@@ -165,6 +185,7 @@ public abstract class SqlParserHandler {
                                 }
                             }
                         }else{
+                            // 如果请求参数是一个数组
                             Object[] array = (Object[]) metaObject.getValue("array");
                             if (array != null && array.length > 0) {
                                 Object object = array[0];
@@ -263,7 +284,6 @@ public abstract class SqlParserHandler {
         if (pluginTuple != null) {
             return pluginTuple;
         }
-
         log.info(" 没有从缓存中获取数据,直接生成数据,key= " + key + ", sql = " + sql);
         if ("?".equals(sql.trim())) {
             pluginTuple = new PPTuple(false, null);
@@ -464,5 +484,6 @@ public abstract class SqlParserHandler {
             }
         }
     }
+
 
 }

@@ -57,9 +57,9 @@ public class DataQueryEncryptScopeInterceptor extends SqlParserHandler implement
             encrySqlParamData(configuration, parameterHandler, mapperdId, boundSql);
             Object result = invocation.proceed();
             return result;
-        } else {
-            return invocation.proceed();
-        }
+       } else {
+          return invocation.proceed();
+       }
     }
 
     /**

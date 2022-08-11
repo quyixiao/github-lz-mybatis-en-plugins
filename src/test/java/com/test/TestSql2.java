@@ -73,9 +73,8 @@ public class TestSql2 {
 
     @org.junit.Test
     public void test() {
-        String sql = " \n" +
-                "SELECT *  from lt_user_phone up, lt_stage_borrow sb\n" +
-                "        where up.unique_code = sb.unique_code and up.user_name_en = ? and up.is_delete = ? and sb.is_delete = ? and sb.`status` in (0,2,5,8)";
+        String sql = " select * from lt_user_phone up left join lt_borrow b on up.id = b.user_id  " +
+                " where up.user_name_en = ? and status = ? ";
         System.out.println(sql);
         printSql(sql);
     }
