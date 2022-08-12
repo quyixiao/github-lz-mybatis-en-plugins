@@ -390,7 +390,7 @@ public class MapF2FInterceptor implements Interceptor {
             getAllField(list, clazz);
             try (ResultSet rs = statement.executeQuery()) {
                 boolean flag = true;
-                if (rs.next()) {
+                while (rs.next()) {
                     flag = false;
                     Object object = objectFactory.create(clazz);
                     for (Field field : list) {
